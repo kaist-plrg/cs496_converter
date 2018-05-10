@@ -53,22 +53,22 @@ object App {
             val major = datas(15)
             val double = datas(16)
 
-            val tablehtml = String.format(table, sex, birth, sem, ent, mil, univ, high, major, double, phone, mail)
+            val tablehtml = String.format(table, photo0, photo1, sex, birth, sem, ent, mil, univ, high, major, double, phone, mail)
 
             val answers = datas.drop(17)
 
-            val writer = new PrintWriter(new File(out + SEP + dirName + SEP + name + ".html"))
+            val writer = new PrintWriter(new File(out + SEP + dirName + SEP + i + ".html"))
             writer.write(String.format(template, (i + 1) + ". " + name, 
-              String.format(appTemplate, (i + 1) + ". " + name, photo0, photo1, tablehtml, product(description, answers).map { case (d, a) =>
+              String.format(appTemplate, (i + 1) + ". " + name, tablehtml, product(description.map(" - " + _), answers).map { case (d, a) =>
                 String.format(tag, d, a)
               }.mkString("\n"))
             ))
             writer.close()
-            name
+            (name, i)
           })
 
           val writer = new PrintWriter(new File(out + SEP + "index.html"))
-          writer.write(String.format(template, "CS496 applicants", names.map(name => String.format(atag, dirName + SEP + name + ".html", name)).mkString("<ol>", "\n", "</ol>")))
+          writer.write(String.format(template, "CS496 applicants", names.map(name => String.format(atag, dirName + SEP + name._2 + ".html", name._1)).mkString("<ol>", "\n", "</ol>")))
           writer.close()
         }
       case _ => println("Need input tsv file and output directory")
@@ -103,14 +103,28 @@ await sleep(5000);"""
 <head>
 <meta charset="utf-8">
 <style>
+h3 {
+	font-family: "Malgun Gothic", "굴림", "Gulim", "Arial";
+    font-size: 14px;
+	font-weight: 900;
+	padding-bottom: 0px;
+	margin-bottom: 0px;
+}
 p, th {
-    font-size: 13px;
+	font-family: "Malgun Gothic", "굴림", "Gulim", "Arial";
+    font-size: 14px;
+	font-weight: 100;
+	margin-top: 3px;
+	padding-top: 0px;
+	padding-bottom: 10px;
+	padding-left: 10px;
 }
 table {
     border-collapse: collapse;
 }
 table, th, td {
     border: 1px solid black;
+    font-size: 14px;
 }
 </style>
 <title>%s</title>
@@ -121,13 +135,17 @@ table, th, td {
 </html>"""
 
   val appTemplate = """<h1>%s</h1>
-<image src="../photos0/%s" height="300"/>
-<image src="../photos1/%s" height="300"/>
 %s
 %s"""
 
   val table = """<table style="width:100%%">
   <tr>
+    <td rowspan="5" width="150px">
+      <img src="../photos0/%s" height="200" />
+    </td>
+    <td rowspan="5" width="100px">
+      <img src="../photos1/%s" height="200" />
+    </td>
     <th><b>성별</b></th>
     <th>%s</th> 
     <th><b>생년</b></th>
