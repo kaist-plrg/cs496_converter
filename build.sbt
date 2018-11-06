@@ -8,5 +8,7 @@ lazy val root = (project in file(".")).
       version      := "0.1.0-SNAPSHOT"
     )),
     name := "tsv2html",
-    libraryDependencies += scalaTest % Test
+    scalacOptions ++= Seq("-encoding", "utf-8", "-Xno-uescape"),
+    libraryDependencies += scalaTest % Test,
+    libraryDependencies += "commons-io" % "commons-io" % "2.6"
   )
