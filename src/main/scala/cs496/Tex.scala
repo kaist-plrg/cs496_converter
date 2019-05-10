@@ -1,8 +1,8 @@
 object Tex {
   val bodyStart =
 """%!TEX encoding = UTF-8 Unicode
-\documentclass[a4paper]{book}
-\usepackage[margin=1in]{geometry}
+\documentclass[a4paper,11pt]{book}
+\usepackage[margin=0.5in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[cjk]{kotex}
@@ -20,6 +20,9 @@ object Tex {
     urlcolor=black
 }
 \usepackage{sectsty,fancyhdr}
+\usepackage{titlesec}
+\titlespacing*{\subsection} {0pt}{1.25ex plus 1ex minus .2ex}{0.5ex plus .2ex}
+\renewcommand\familydefault{\sfdefault}
 \chapterfont{\LARGE\bfseries}
 \usepackage{titlesec}
 \titleformat{\chapter}
@@ -50,7 +53,7 @@ object Tex {
   def entryStart(
     name: String,
     photo0: Option[String],
-    photo1: Option[String],
+//    photo1: Option[String],
     sex: String,
     birth: String,
     ent: String,
@@ -67,34 +70,33 @@ object Tex {
   val photo0t = photo0 match {
     case Some(n) => 
 s"""\\graphicspath{{./photo0/}}
-\\includegraphics[width=0.5\\textwidth]{$n}
+\\includegraphics[width=0.5\\textwidth,height=0.25\\textheight,keepaspectratio]{$n}
 """
     case None => ""
   }
-  val photo1t = photo1 match {
-    case Some(n) => 
-s"""\\graphicspath{{./photo1/}}
-\\includegraphics[width=0.5\\textwidth]{$n}
-"""
-    case None => ""
-  }
+//  val photo1t = photo1 match {
+//    case Some(n) => 
+//s"""\\graphicspath{{./photo1/}}
+//\\includegraphics[width=0.5\\textwidth,height=0.25\\textheight,keepaspectratio]{$n}
+//"""
+//    case None => ""
+//  }
 s"""\\chapter{$name}
-$photo0t$photo1t\\[
+$photo0t\\[
 \\begin{tabular}{|C{0.13\\textwidth}|C{0.32\\textwidth}||C{0.13\\textwidth}|C{0.32\\textwidth}|} \\hline
-\\text{성별} & \\text{$sex} & \\text{생년월일} & \\text{$birth} \\\\ \\hline
-\\text{학번} & \\text{$ent} & \\text{학기} & \\text{$sem} \\\\ \\hline
-\\text{병역} & \\text{$mil} & \\text{졸업학기/휴학} & \\text{$last} \\\\ \\hline
-\\text{대학교} & \\text{$univ} & \\text{고교} & \\text{$high} \\\\ \\hline
-\\text{주전공} & \\text{$major} & \\text{복수/부전공} & \\text{($double)} \\\\ \\hline
-\\text{전화번호} & \\text{\\texttt{$phone}} & \\text{이메일} & \\text{\\texttt{$email}} \\\\ \\hline
+\\text{{\\bf 성별}} & \\text{$sex} & \\text{{\\bf 생년월일}} & \\text{$birth} \\\\ \\hline
+\\text{{\\bf 학번}} & \\text{$ent} & \\text{{\\bf 학기}} & \\text{$sem} \\\\ \\hline
+\\text{{\\bf 병역}} & \\text{$mil} & \\text{{\\bf 졸업/휴학}} & \\text{$last} \\\\ \\hline
+\\text{{\\bf 대학교}} & \\text{$univ} & \\text{{\\bf 고교}} & \\text{$high} \\\\ \\hline
+\\text{{\\bf 주전공}} & \\text{$major} & \\text{{\\bf 복수/부전공}} & \\text{($double)} \\\\ \\hline
+\\text{{\\bf 전화번호}} & \\text{\\texttt{$phone}} & \\text{{\\bf 이메일}} & \\text{\\texttt{$email}} \\\\ \\hline
 \\end{tabular}
 \\]
 """
 }
-  val entryEnd =
-""
+  val entryEnd = ""
   def subsection(p: (String, String)) = p match { case (des, ans) =>
-s"""\\subsection*{$des}
+s"""\\subsection*{- $des}
 $ans
 """
   }
