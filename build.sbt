@@ -1,14 +1,18 @@
-import Dependencies._
+ThisBuild / organization := "io.madcamp"
+ThisBuild / scalaVersion := "2.13.1"
+ThisBuild / version      := "1.0.0"
+ThisBuild / name         := "apptopdf"
 
-lazy val root = (project in file(".")).
-  settings(
-    inThisBuild(List(
-      organization := "com.cs496",
-      scalaVersion := "2.12.5",
-      version      := "0.1.0-SNAPSHOT"
-    )),
-    name := "tsv2html",
-    scalacOptions ++= Seq("-encoding", "utf-8", "-Xno-uescape"),
-    libraryDependencies += scalaTest % Test,
-    libraryDependencies += "commons-io" % "commons-io" % "2.6"
-  )
+ThisBuild / scalacOptions += "-deprecation"
+ThisBuild / scalacOptions += "-Xno-uescape"  // prevent backslash u escaping in strings
+ThisBuild / scalacOptions += "-Xlint:unused"
+
+ThisBuild / libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0"
+ThisBuild / libraryDependencies += "commons-io" % "commons-io" % "2.6"
+ThisBuild / libraryDependencies += "org.apache.poi" % "poi-ooxml" % "4.1.2"
+ThisBuild / libraryDependencies += "com.google.api-client" % "google-api-client" % "1.30.9"
+ThisBuild / libraryDependencies += "com.google.oauth-client" % "google-oauth-client-jetty" % "1.30.5"
+ThisBuild / libraryDependencies += "com.google.apis" % "google-api-services-drive" % "v3-rev193-1.25.0"
+ThisBuild / libraryDependencies += "com.typesafe.play" %% "play-json" % "2.8.1"
+
+Global / onChangedBuildSource := ReloadOnSourceChanges
