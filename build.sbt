@@ -23,3 +23,5 @@ ThisBuild / libraryDependencies += "ws.unfiltered" %% "unfiltered-filter" % unfi
 ThisBuild / libraryDependencies += "ws.unfiltered" %% "unfiltered-jetty" % unfilteredVersion
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
+Global / useCoursier := false
+Global / retrieveManaged  := true

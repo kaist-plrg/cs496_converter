@@ -15,7 +15,7 @@ color: #444;
 line-height: 1.7;
 padding: 1em;
 margin: auto;
-max-width: 720px;
+max-width: 780px;
 background: #fefefe;
 font-family: 'Noto Sans KR', 'Helvetica', 'Roboto', sans-serif;
 }
@@ -124,6 +124,7 @@ tr:nth-child(even) {
     <p>지원서 PDF 제작 시에는 "지원서 다운로드" - "학생 읽기"
     - "사진 다운로드" - "PDF 만들기" 순서로 진행해야 합니다.</p>
     <p>학생 선발 시에는 "평가 양식 다운로드" - "선발" 순서로 진행해야 합니다.</p>
+    <p>프로그램이 업로드한 파일을 삭제하려면 "삭제" 버튼을 누르세요.</p>
     <input id="input_id" type="url" placeholder="디렉토리 링크"></input>
     <input id="input_seed" type="text" value="hello" placeholder="시드"></input>
     <input id="input_size" type="number" value="20" placeholder="분반 인원"></input>
@@ -135,5 +136,6 @@ tr:nth-child(even) {
     <button onclick="get('photos')">사진 다운로드</button>
     <button onclick="get('tex')">PDF 만들기</button>
     <button onclick="pick()">선발</button>
+    <button onclick="get('delete')">삭제</button>
   </body>
 </html>

@@ -18,7 +18,8 @@ import scala.collection.mutable.{Map => MMap}
 
 class ServerPlan extends Plan {
 
-  val out = "out"
+  val home = sys.env("MADCAMP_UTIL_HOME")
+  val out = home + File.separator + "out"
   val dir = new File(out)
   val sheetDir = new File(out + File.separator + "sheets")
   val photoDir = new File(out + File.separator + "photos")
@@ -37,21 +38,24 @@ class ServerPlan extends Plan {
   val efile = sheetDir.getAbsolutePath + File.separator + "evals.xlsx"
   val cfile = sheetDir.getAbsolutePath + File.separator + "config.xlsx"
 
-  val service = GoogleDriveUtil.service("credential.json")
+  val service = GoogleDriveUtil.service(home + File.separator + "credential.json")
 
   var students: List[(Student, Int)] = null
-  var photoFiles: Map[Int, String] = null
   var summaries: List[Row] = null
 
   def intent = Directive.Intent {
     case r @ GET(Path("/")) =>
       success(
-        HtmlContent ~> ResponseString(Source.fromFile("index.html").mkString)
+        HtmlContent ~> ResponseString(
+          Source.fromFile(home + File.separator + "index.html").mkString
+        )
       )
     case r @ GET(Path("/index.js")) =>
       success(
         ResponseHeader("Content-Type", List("text/javascript")) ~>
-        ResponseString(Source.fromFile("index.js").mkString)
+        ResponseString(
+          Source.fromFile(home + File.separator + "index.js").mkString
+        )
       )
 
     case r @ GET(Path("/downloads") & Params(params)) => run {
@@ -76,20 +80,22 @@ class ServerPlan extends Plan {
         case (s, i) =>
           GoogleDriveUtil.downloadPhoto(service, s.photo, i, photoDir)
       }
-      photoFiles =
-        FileUtils.iterateFiles(photoDir, null, false).asScala.map(
-          s => {
-            val n = s.getName
-            nameWithoutExtension(n).toInt -> s.getAbsolutePath
-          }
-        ).toMap
       success(Ok)
     }
 
-    case r @ GET(Path("/tex")) => run {
+    case r @ GET(Path("/tex") & Params(params)) => run {
+      val parent = getId(params("id"))
       FileUtils.cleanDirectory(texDir)
-      printTex(false)
-      printTex(true)
+      val f1 = printTex(false)
+      GoogleDriveUtil.uploadPdf(
+        service, parent,
+        "CS496: 20xx 여름/겨울 지원서.pdf", new File(f1)
+      )
+      val f2 = printTex(true)
+      GoogleDriveUtil.uploadPdf(
+        service, parent,
+        "CS496: 20xx 여름/겨울 지원서(공유).pdf", new File(f2)
+      )
     }
 
     case r @ GET(Path("/evals") & Params(params)) => run {
@@ -211,11 +217,10 @@ class ServerPlan extends Plan {
       })
 
       // uploading to Google Drive
-      // val id = GoogleDriveUtil.uploadExcel(
-      //   service, parent, "CS496: 20xx 여름/겨울 그룹 편성(전체)", new File(file)
-      // )
-      // Process(s"open https://docs.google.com/spreadsheets/d/$id").!
-      //
+      val id = GoogleDriveUtil.uploadExcel(
+        service, parent, "CS496: 20xx 여름/겨울 그룹 편성(전체)", new File(file)
+      )
+      Process(s"open https://docs.google.com/spreadsheets/d/$id").!
 
       // statistics
       Json.toJson(
@@ -235,13 +240,22 @@ class ServerPlan extends Plan {
       )
     }
 
-    case r @ GET(Path("/test")) => run {
-     service.files.list.setQ("name = \'CS496: 20xx 여름/겨울 그룹 편성(전체)\'")
-     .execute().getFiles.asScala.foreach(
-       f =>
-         // service.files.delete(f.getId).execute()
-         println(f)
-     )
+    case r @ GET(Path("/delete")) => run {
+      def deleteAll(name: String) =
+        service
+          .files
+          .list
+          .setQ(s"name = \'$name\'")
+          .execute()
+          .getFiles
+          .asScala
+          .foreach(f => {
+            service.files.delete(f.getId).execute()
+            println(s"${f.getId} deleted")
+          })
+      deleteAll("CS496: 20xx 여름/겨울 그룹 편성(전체)")
+      deleteAll("CS496: 20xx 여름/겨울 지원서.pdf")
+      deleteAll("CS496: 20xx 여름/겨울 지원서(공유).pdf")
     }
 
     case _ => success(NotFound)
@@ -267,7 +281,14 @@ class ServerPlan extends Plan {
     }
   }
 
-  def printTex(share: Boolean): Unit = {
+  def printTex(share: Boolean): String = {
+    val photoFiles =
+      FileUtils.iterateFiles(photoDir, null, false).asScala.map(
+        s => {
+          val n = s.getName
+          nameWithoutExtension(n).toInt -> s.getAbsolutePath
+        }
+      ).toMap
     val texContent =
       students.map{
         case (s, i) => Tex.mkChapter(s, photoFiles(i), i, share, summaries)
@@ -278,6 +299,7 @@ class ServerPlan extends Plan {
     val ns = if (share) "share" else "internal"
     val name = s"applicants-$ns"
     val texFile = texDir.getAbsolutePath + File.separator + name + ".tex"
+    val pdfFile = texDir.getAbsolutePath + File.separator + name + ".pdf"
     val texWriter = new PrintWriter(new File(texFile))
     texWriter.print(texContent)
     texWriter.close()
@@ -285,7 +307,8 @@ class ServerPlan extends Plan {
     Process(s"xelatex $name", texDir).!
     Process(s"xelatex $name", texDir).!
     Process(s"xelatex $name", texDir).!
-    Process(s"open $name.pdf").!
+    Process(s"open $pdfFile").!
+    pdfFile
   }
 
   def register(a: Seq[Applicant], s: List[Session]): Unit = {

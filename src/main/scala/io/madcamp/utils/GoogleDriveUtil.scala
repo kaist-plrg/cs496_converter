@@ -17,6 +17,7 @@ object GoogleDriveUtil {
   private val scopes = List(DriveScopes.DRIVE).asJava
   private val xlsxType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   private val gsheetType = "application/vnd.google-apps.spreadsheet"
+  private val pdfType = "application/pdf"
 
   def service(credentialsFile: String): Drive = {
     val transport = GoogleNetHttpTransport.newTrustedTransport
@@ -66,6 +67,16 @@ object GoogleDriveUtil {
     meta.setParents(List(parent).asJava)
     meta.setMimeType(gsheetType)
     val content = new FileContent(xlsxType, file)
+    val res = service.files.create(meta, content).setFields("id").execute()
+    res.getId
+  }
+
+  def uploadPdf(service: Drive, parent: String, name: String, file: File): String = {
+    val meta = new GFile;
+    meta.setName(name);
+    meta.setParents(List(parent).asJava)
+    meta.setMimeType(pdfType)
+    val content = new FileContent(pdfType, file)
     val res = service.files.create(meta, content).setFields("id").execute()
     res.getId
   }
