@@ -1,10 +1,9 @@
 ThisBuild / organization := "io.madcamp"
-ThisBuild / scalaVersion := "2.13.1"
+ThisBuild / scalaVersion := "2.13.2"
 ThisBuild / version      := "1.0.0"
-ThisBuild / name         := "apptopdf"
+ThisBuild / name         := "utils"
 
 ThisBuild / scalacOptions += "-deprecation"
-ThisBuild / scalacOptions += "-Xno-uescape"  // prevent backslash u escaping in strings
 ThisBuild / scalacOptions += "-Xlint:unused"
 
 ThisBuild / libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0"

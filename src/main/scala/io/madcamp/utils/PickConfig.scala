@@ -1,4 +1,4 @@
-package io.madcamp.apptopdf
+package io.madcamp.utils
 
 class PickConfig(lines: List[String]) {
 
@@ -16,7 +16,7 @@ class PickConfig(lines: List[String]) {
     }
     def aux(t: String, f: String, func: Applicant => Boolean): List[(Int, Int, Int)] =
       (parse(t) ++ parse(f)).map(ratio2Num(_)) match {
-        case tl :: th :: fl :: fh :: Nil => {
+        case List(tl, th, fl, fh) => {
           val d = a.groupBy(func)
           val (t, f) = (aux0(d, true), aux0(d, false))
           (t, tl, th) :: (f, fl, fh) :: Nil
@@ -24,12 +24,14 @@ class PickConfig(lines: List[String]) {
       }
 
     (lines match {
-      case year :: young :: midOld :: old :: male :: female :: mil :: notMil ::
-        kaist :: notKaist :: repeat :: notRepeat :: lowCode :: midCode :: highCode :: superCode ::
-        lowCoop :: midCoop :: highCoop :: abroad :: notAbroad :: Nil =>
+      case List(
+        year, young, midOld, old, male, female, mil, notMil,
+        kaist, notKaist, repeat, notRepeat, lowCode, midCode, highCode, superCode,
+        lowCoop, midCoop, highCoop, abroad, notAbroad
+      ) =>
 
         (parse(year) ++ (parse(young) ++ parse(midOld) ++ parse(old)).map(ratio2Num(_)) match {
-          case yearl :: yearh :: yl :: yh :: ml :: mh :: ol :: oh :: Nil => {
+          case List(yearl, yearh, yl, yh, ml, mh, ol, oh) => {
             val d = a.groupBy(ap => (ap.birth / 10000) match {
               case x if x > yearh => 'y'
               case x if x < yearl => 'o'
@@ -45,14 +47,14 @@ class PickConfig(lines: List[String]) {
         aux(repeat, notRepeat, _.isRepeat) ++
         aux(abroad, notAbroad, _.isAbroad) ++
         ((parse(lowCode) ++ parse(midCode) ++ parse(highCode) ++ parse(superCode)).map(ratio2Num(_)) match {
-          case ll :: lh :: ml :: mh :: hl :: hh :: sl :: sh :: Nil => {
+          case List(ll, lh, ml, mh, hl, hh, sl, sh) => {
             val d = a.groupBy(_.coding)
             val (l, m, h, s) = (aux0(d, "하"), aux0(d, "중"), aux0(d, "상"), aux0(d, "최상"))
             (l, ll, lh) :: (m, ml, mh) :: (h, hl, hh) :: (s, sl, sh) :: Nil
           }
         }) ++
         ((parse(lowCoop) ++ parse(midCoop) ++ parse(highCoop)).map(ratio2Num(_)) match {
-          case ll :: lh :: ml :: mh :: hl :: hh :: Nil => {
+          case List(ll, lh, ml, mh, hl, hh) => {
             val d = a.groupBy(_.cooperation)
             val (l, m, h) = (aux0(d, "하"), aux0(d, "중"), aux0(d, "상"))
             (l, ll, lh) :: (m, ml, mh) :: (h, hl, hh) :: Nil

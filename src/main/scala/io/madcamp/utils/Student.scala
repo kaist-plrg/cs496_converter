@@ -1,4 +1,4 @@
-package io.madcamp.apptopdf
+package io.madcamp.utils
 
 import org.apache.poi.ss.usermodel.Row
 import scala.jdk.CollectionConverters._

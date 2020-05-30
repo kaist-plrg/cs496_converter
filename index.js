@@ -1,55 +1,52 @@
-function downloads() {
-  const aid = encodeURIComponent($('#input_aid')[0].value);
-  const pid = encodeURIComponent($('#input_pid')[0].value);
-  const sid = encodeURIComponent($('#input_sid')[0].value);
-  if (aid && pid && sid) {
-    $.ajax({
-      type: 'GET',
-      url: `/downloads?aid=${aid}&pid=${pid}&sid=${sid}`
-    })
-    .done(msg => {
-      if (msg.success) alert("success!")
-      else alert("failed!")
-    });
-  }
-}
 function get(s) {
-  $.ajax({
-    type: 'GET',
-    url: `/${s}`
-  })
-  .done(msg => {
-    if (msg.success) alert("success!")
-    else alert("failed!")
-  });
-}
-function evals() {
-  const eid = encodeURIComponent($('#input_eid')[0].value);
-  const cid = encodeURIComponent($('#input_cid')[0].value);
-  if (eid && cid) {
+  const id = encodeURIComponent($('#input_id')[0].value);
+  if (id) {
+    $(".loader").css("display", "block");
     $.ajax({
       type: 'GET',
-      url: `/evals?eid=${eid}&cid=${cid}`
+      url: `/${s}?id=${id}`
     })
     .done(msg => {
-      if (msg.success) alert("success!")
-      else alert("failed!")
+      $(".loader").css("display", "none");
+      if (!msg.success) alert("failed!");
     });
-  }
+  } else
+    alert("empty id");
 }
 function pick() {
   const seed = encodeURIComponent($('#input_seed')[0].value);
   const size = $('#input_size')[0].value;
   const gsize = $('#input_gsize')[0].value;
   const num = $('#input_num')[0].value;
-  if (seed && size && gsize && num) {
+  const id = encodeURIComponent($('#input_id')[0].value);
+  if (seed && size && gsize && num && id) {
+    $(".loader").css("display", "block");
     $.ajax({
       type: 'GET',
-      url: `/pick?seed=${seed}&size=${size}&gsize=${gsize}&num=${num}`
+      url: `/pick?seed=${seed}&size=${size}&gsize=${gsize}&num=${num}&id=${id}`
     })
     .done(msg => {
-      if (msg.success) alert("success!")
-      else alert("failed!")
+      $(".loader").css("display", "none");
+      if (msg.success) {
+        if ($("#div-result")[0]) $("#div-result")[0].remove();
+        $("body").append('<div class=".table-wrapper" id="div-result"></div>');
+        const div = $("#div-result");
+        for (const t of msg.result) {
+          div.append(`<h2>${t[0]}</h2>`);
+          drawTable(div, t[1]);
+        }
+      } else alert("failed!");
     });
-  }
+  } else
+    alert("empty id");
+}
+var x = 0;
+function drawTable(div, rs) {
+  div.append(`<table id="table-${x}"></table>`);
+  const table = $(`#table-${x}`);
+  for (const r of rs)
+    table.append(
+      '<tr>' + r.map(x => `<td>${x}</td>`).join('\n') + '</tr>'
+    );
+  x += 1;
 }
