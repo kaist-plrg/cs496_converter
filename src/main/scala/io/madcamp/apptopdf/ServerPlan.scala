@@ -6,7 +6,7 @@ import unfiltered.response._
 import unfiltered.directives._, Directives._
 import org.apache.commons.io.FileUtils
 import org.apache.poi.ss.usermodel.{WorkbookFactory, Row}
-import java.io.{File, PrintWriter, FileOutputStream}
+import java.io.{File, PrintWriter}
 import java.net.URLDecoder.decode
 import scala.collection.parallel.CollectionConverters._
 import scala.jdk.CollectionConverters._
@@ -28,6 +28,7 @@ class ServerPlan extends Plan {
   if (!sheetDir.exists) sheetDir.mkdir()
   if (!photoDir.exists) photoDir.mkdir()
   if (!texDir.exists) texDir.mkdir()
+  if (!pickDir.exists) pickDir.mkdir()
 
   val afile = sheetDir.getAbsolutePath + File.separator + "applicants.xlsx"
   val pfile = sheetDir.getAbsolutePath + File.separator + "prevs.xlsx"
@@ -40,6 +41,9 @@ class ServerPlan extends Plan {
   var students: List[(Student, Int)] = null
   var photoFiles: Map[Int, String] = null
   var summaries: List[Row] = null
+  var sessions: List[Session] = null
+  var groups: Map[Int, Map[Int, Session]] = null
+  var notAccepted: List[Applicant] = null
 
   def intent = Directive.Intent {
     case r @ GET(Path("/")) =>
@@ -106,8 +110,8 @@ class ServerPlan extends Plan {
       val head :: _data = getRows(efile)
       val configs = getRows(cfile).map(ExcelUtil.getString(_, 0))
         .takeWhile(_.nonEmpty)
-
       Applicant.initialize(head, summaries(5), summaries(6))
+      val conf = new PickConfig(configs)
 
       val data = _data.filter(r => ExcelUtil.getString(r, 0).nonEmpty)
       if (students.length != data.length)
@@ -115,14 +119,11 @@ class ServerPlan extends Plan {
       val origApplicants = (students zip data).map{
         case ((s, _), r) => Applicant(s, r)
       }
-
       val applicants = origApplicants.filterNot(a => a.coding == "하" && a.cooperation == "하")
       val byAccept = applicants.groupBy(_.accept)
       val accepts = byAccept("O")
       val intermediates = byAccept("?")
       val (mintermediates, nintermediates) = intermediates.partition(_.motiv)
-
-      val conf = new PickConfig(configs)
 
       val iter = 10
       val sessionss = for (i <- 1 to iter) yield {
@@ -146,11 +147,155 @@ class ServerPlan extends Plan {
         ).sum
       }
 
-      val sessions = sessionss.minBy(univVar)
-      printResult(
-        pickDir.getAbsolutePath, conf, gsize,
-        applicants, accepts, intermediates, sessions
+      sessions = sessionss.minBy(univVar)(Ordering.Double.TotalOrdering)
+      groups = sessions.zipWithIndex.map{
+        case (s, i) =>
+          val groups = List.fill(size / gsize)(new Session(conf, gsize))
+          register(s.accepted, groups)
+          (i + 1) -> (groups.zipWithIndex.map{
+            case (g, j) => j + 1 -> g
+          }.toMap)
+      }.toMap
+      val allAccepted = sessions.flatMap(_.accepted)
+      notAccepted = (accepts ++ intermediates).filterNot(allAccepted.contains(_))
+    }
+
+    case r @ GET(Path("/sessions")) => run {
+      val file = pickDir.getAbsolutePath + File.separator + "sessions.xlsx"
+      ExcelUtil.writeWorkbook(file, wb => {
+        val sheet = wb.createSheet("참가자")
+        def write(r: Row, i: Int, s: String): Unit = {
+          val c = r.createCell(i)
+          c.setCellValue(s)
+        }
+
+        val header = sheet.createRow(0)
+        Applicant.headerTitles.zipWithIndex.foreach{
+          case (h, i) => write(header, i, h)
+        }
+
+        var rn = 1
+        for (i <- groups.keys.toList.sorted) {
+          val m = groups(i)
+          for (j <- m.keys.toList.sorted) {
+            val g = m(j)
+            val gh = sheet.createRow(rn)
+            rn += 1
+            write(gh, 0, s"${i}분반 / ${j}그룹")
+            for (s <- g.accepted.sortBy(a => (a.university, a.ent, a.name))) {
+              val r = sheet.createRow(rn)
+              s.info.zipWithIndex.foreach{
+                case (s, i) => write(r, i, s)
+              }
+              rn += 1
+            }
+          }
+        }
+      })
+    }
+
+    case r @ GET(Path("/waits")) => run {
+      val file = pickDir.getAbsolutePath + File.separator + "waits.xlsx"
+
+      val waits = MMap[Applicant, Int]()
+      def updateWaits(a: Applicant, sc: Int): Unit = waits.get(a) match {
+        case Some(n) => waits.update(a, n + sc)
+        case None => waits += (a -> sc)
+      }
+      sessions.foreach(s =>
+        for (a <- s.accepted)
+          s.withoutDo(a){
+            val sorted = (for (aa <- notAccepted) yield (aa, s.scoreIncrease(aa))).sortBy(-_._2)
+            updateWaits(sorted(0)._1, 2);
+            updateWaits(sorted(1)._1, 1);
+          }
       )
+      ExcelUtil.writeWorkbook(file, wb => {
+        val sheet = wb.createSheet("대기자")
+        def write(r: Row, i: Int, s: String): Unit = {
+          val c = r.createCell(i)
+          c.setCellValue(s)
+        }
+
+        val header = sheet.createRow(0)
+        (Applicant.headerTitles :+ "점수").zipWithIndex.foreach{
+          case (h, i) => write(header, i, h)
+        }
+
+        waits.toList.sortBy(-_._2).zipWithIndex.foreach{
+          case ((s, score), rn) =>
+            val r = sheet.createRow(rn + 1)
+            (s.info :+ score.toString).zipWithIndex.foreach{
+              case (s, i) => write(r, i, s)
+            }
+        }
+      })
+    }
+
+    case r @ GET(Path("/rejects")) => run {
+      val file = pickDir.getAbsolutePath + File.separator + "rejects.xlsx"
+      ExcelUtil.writeWorkbook(file, wb => {
+        val sheet = wb.createSheet("탈락자")
+        def write(r: Row, i: Int, s: String): Unit = {
+          val c = r.createCell(i)
+          c.setCellValue(s)
+        }
+
+        val header = sheet.createRow(0)
+        Applicant.headerTitles.zipWithIndex.foreach{
+          case (h, i) => write(header, i, h)
+        }
+
+        notAccepted.zipWithIndex.foreach{
+          case (s, rn) =>
+            val r = sheet.createRow(rn + 1)
+            s.info.zipWithIndex.foreach{
+              case (s, i) => write(r, i, s)
+            }
+        }
+      })
+    }
+
+    case r @ GET(Path("/stats")) => run {
+      val file = pickDir.getAbsolutePath + File.separator + "stats.xlsx"
+      ExcelUtil.writeWorkbook(file, wb => {
+        val sheet = wb.createSheet("통계")
+        def write(r: Row, i: Int, s: String): Unit = {
+          val c = r.createCell(i)
+          c.setCellValue(s)
+        }
+
+        var rn = 0
+        for (i <- groups.keys.toList.sorted) {
+          val m = groups(i)
+          val r = sheet.createRow(rn)
+          rn += 1
+
+          write(r, 0, s"${i}분반")
+          sessions(i - 1).statistics.map(_.split(",")).foreach{
+            case arr =>
+              val r = sheet.createRow(rn)
+              rn += 1
+              arr.zipWithIndex.foreach{
+                case (s, i) => write(r, i, s)
+              }
+          }
+
+          for (j <- m.keys.toList.sorted) {
+            val r = sheet.createRow(rn)
+            rn += 1
+            write(r, 0, s"${i}분반 ${j}그룹")
+            m(j).statistics.map(_.split(",")).foreach{
+              case arr =>
+                val r = sheet.createRow(rn)
+                rn += 1
+                arr.zipWithIndex.foreach{
+                  case (s, i) => write(r, i, s)
+                }
+            }
+          }
+        }
+      })
     }
 
     case _ => success(NotFound)
@@ -237,84 +382,22 @@ class ServerPlan extends Plan {
   private def nameWithoutExtension(name: String): String =
     name.substring(0, name.lastIndexOf("."))
 
-  private def printResult(
-    out: String, conf: PickConfig, gsize: Int,
-    applicants: List[Applicant], accepts: List[Applicant], intermediates: List[Applicant],
-    sessions: List[Session]
-  ): Unit = {
-    val writer = new FileOutputStream(out + ".csv")
-    val swriter = new FileOutputStream(out + ".stats.csv")
-    val wwriter = new FileOutputStream(out + ".waits.csv")
-    val rwriter = new FileOutputStream(out + ".rejected.csv")
+//     val applicantBy = applicants.groupBy(_.university)
+//     val acceptedBy = allAccepted.groupBy(_.university)
+//     println("===Application===")
+//     println(applicantBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
+//     println("===Accepted===")
+//     println(acceptedBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
+//     println("===Ratio===")
+//     println(applicantBy.keys.map(k => s"$k\t${acceptedBy.getOrElse(k, Nil).length.toDouble / applicantBy(k).toList.length}").toList.sorted.mkString("\n"))
+//     println()
 
-    val encoding = "euc-kr"
-    def rprintln(s: String): Unit = writer.write((s + "\n").getBytes(encoding))
-    def sprintln(s: String): Unit = swriter.write((s + "\n").getBytes(encoding))
-    def wprintln(s: String): Unit = wwriter.write((s + "\n").getBytes(encoding))
-    def rjprintln(s: String): Unit = rwriter.write((s + "\n").getBytes(encoding))
-
-    sessions.zipWithIndex.foreach{ case (s, i) =>
-      rprintln(s"${i + 1}분반")
-
-      sprintln(s"${i + 1}분반")
-      sprintln(s.toString)
-
-      val groups = List(new Session(conf, gsize), new Session(conf, gsize))
-      register(s.accepted, groups)
-      groups.zipWithIndex.foreach{ case (g, j) =>
-        rprintln(s"${j}그룹")
-        rprintln("이름,학교,성별,학번,전공,이메일,전화번호,생년월일,병역,재수,대학,코딩,팀웍,다양성,합격,비고")
-        rprintln(g.toResult)
-
-        sprintln(s"${j + 1}그룹")
-        sprintln(g.toString)
-      }
-    }
-
-    val allAccepted = sessions.flatMap(_.accepted)
-    val notAccepted = (accepts ++ intermediates).filterNot(allAccepted.contains(_))
-
-    println(allAccepted.length)
-    println(notAccepted.length)
-
-    val waits = MMap[Applicant, Int]()
-    def updateWaits(a: Applicant, sc: Int): Unit = waits.get(a) match {
-      case Some(n) => waits.update(a, n + sc)
-      case None => waits += (a -> sc)
-    }
-    sessions.foreach(s =>
-      for (a <- s.accepted)
-        s.withoutDo(a){
-          val sorted = (for (aa <- notAccepted) yield (aa, s.scoreIncrease(aa))).sortBy(-_._2)
-          updateWaits(sorted(0)._1, 2);
-          updateWaits(sorted(1)._1, 1);
-        }
-    )
-
-    waits.toList.sortBy(-_._2).map(a => s"${a._1},${a._2}").foreach(wprintln)
-    notAccepted.toList.map(_.toString).foreach(rjprintln)
-
-    writer.close()
-    swriter.close()
-    wwriter.close()
-
-    val applicantBy = applicants.groupBy(_.university)
-    val acceptedBy = allAccepted.groupBy(_.university)
-    println("===Application===")
-    println(applicantBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
-    println("===Accepted===")
-    println(acceptedBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
-    println("===Ratio===")
-    println(applicantBy.keys.map(k => s"$k\t${acceptedBy.getOrElse(k, Nil).length.toDouble / applicantBy(k).toList.length}").toList.sorted.mkString("\n"))
-    println()
-
-    val qApplicantBy = intermediates.groupBy(_.university)
-    val qAcceptedBy = allAccepted.filter(_.accept == "?").groupBy(_.university)
-    println("===?Application===")
-    println(qApplicantBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
-    println("===Accepted===")
-    println(qAcceptedBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
-    println("===?Ratio===")
-    println(qApplicantBy.keys.map(k => s"$k\t${qAcceptedBy.getOrElse(k, Nil).length.toDouble / qApplicantBy(k).toList.length}").toList.sorted.mkString("\n"))
-  }
+//     val qApplicantBy = intermediates.groupBy(_.university)
+//     val qAcceptedBy = allAccepted.filter(_.accept == "?").groupBy(_.university)
+//     println("===?Application===")
+//     println(qApplicantBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
+//     println("===Accepted===")
+//     println(qAcceptedBy.map(a => s"${a._1}\t${a._2.length}").toList.sorted.mkString("\n"))
+//     println("===?Ratio===")
+//     println(qApplicantBy.keys.map(k => s"$k\t${qAcceptedBy.getOrElse(k, Nil).length.toDouble / qApplicantBy(k).toList.length}").toList.sorted.mkString("\n"))
 }

@@ -28,6 +28,26 @@ case class Applicant(student: Student, row: Row) {
 
   override def toString: String =
     s"${name},${university},${if (isMale) "남" else "여"},${ent}학번,${major.replace(',', ' ')},${mail},${phone},${birth},${if (isMilitary) "병역필" else "-"},${if (isRepeat) "재수" else "-"},${if (isAbroad) "해외" else "국내"},${coding},${cooperation},${motiv},${accept},${etc}"
+
+  def info: List[String] =
+    List(
+      name,
+      university,
+      if (isMale) "남" else "여",
+      s"${ent}학번",
+      major.replace(',', ' '),
+      mail,
+      phone,
+      birth.toString,
+      if (isMilitary) "병역필" else "-",
+      if (isRepeat) "재수" else "-",
+      if (isAbroad) "해외" else "국내",
+      coding,
+      cooperation,
+      if (motiv) "O" else "X",
+      accept,
+      etc
+    )
 }
 
 object Applicant {
@@ -54,4 +74,10 @@ object Applicant {
       case (_, ind) => sys.error(s"${colNames2(ind)} not found")
     }
   }
+
+  val headerTitles = List(
+    "이름", "학교", "성별", "학번", "전공", "이메일",
+    "전화번호", "생년월일" ,"병역", "재수", "대학",
+    "코딩", "팀웍", "다양성", "합격", "비고"
+  )
 }

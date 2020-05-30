@@ -1,6 +1,8 @@
 package io.madcamp.apptopdf
 
 import org.apache.poi.ss.usermodel.{Row, CellType, Cell}
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.{File, FileOutputStream}
 import scala.jdk.CollectionConverters._
 
 object ExcelUtil {
@@ -20,5 +22,14 @@ object ExcelUtil {
   }
 
   def getString(row: Row, col: Int): String = getString(row.getCell(col))
+
+  def writeWorkbook(path: String, func: XSSFWorkbook => Unit): Unit = {
+    val wb = new XSSFWorkbook
+    func(wb)
+    val out = new FileOutputStream(new File(path))
+    wb.write(out)
+    wb.close()
+    out.close()
+  }
 
 }

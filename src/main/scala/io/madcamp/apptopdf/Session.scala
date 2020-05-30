@@ -30,14 +30,24 @@ class Session(conf: PickConfig, size: Int) {
   def canAdd: Boolean = applicants.size < size
   def in(a: Applicant): Boolean = applicants.contains(a)
 
-  def toResult: String = applicants.sortBy(a => (a.university, a.ent, a.name)).map(_.toString).mkString("\n")
+  def statistics: List[String] = {
+    def aux(s: String, f: Applicant => Any): List[String] =
+      (s + ",") ::
+        applicants.groupBy(f(_)).map{
+          case (k, v) => s"$k,${v.size}"
+        }.toList.sorted
 
-  override def toString: String = {
-    def aux(s: String, f: Applicant => Any): List[String] = (s + ",") :: applicants.groupBy(f(_)).map { case (k, v) => k + "," + v.size }.toList.sorted
     def append(l1: List[String], l2: List[String]): List[String] =
       (for (i <- 0 until Math.max(l1.size, l2.size))
-        yield (if (i < l1.size) (if (i < l2.size) l1(i) + "," + l2(i) else l1(i) + ",,") else ",," + l2(i))).toList
-    List(aux("birth", _.birth / 10000),
+        yield (
+          if (i < l1.size)
+            (if (i < l2.size) l1(i) + "," + l2(i) else l1(i) + ",,")
+          else ",," + l2(i)
+        )
+      ).toList
+
+    List(
+      aux("birth", _.birth / 10000),
       aux("sex", a => if (a.isMale) "male" else "female"),
       aux("military?", _.isMilitary),
       aux("repeat?", _.isRepeat),
@@ -45,6 +55,7 @@ class Session(conf: PickConfig, size: Int) {
       aux("kaist?", _.isKaist),
       aux("coding", _.coding),
       aux("cooperation", _.cooperation),
-      aux("diversity?", _.motiv)).reduce(append(_, _)).mkString("\n")
+      aux("diversity?", _.motiv)
+    ).reduce(append(_, _))
   }
 }
