@@ -16,7 +16,7 @@ object ExcelUtil {
       case CellType.FORMULA =>
         c.getCellFormula
       case _ => c.getStringCellValue
-    }).trim
+    }).trim.filterNot(_.isControl)
   }
 
   def getString(row: Row, col: Int): String = getString(row.getCell(col))

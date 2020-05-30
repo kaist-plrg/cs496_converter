@@ -8,7 +8,10 @@ case class Student(
   photo: String,
   tableInfo: List[(String, String)],
   parInfo: List[(String, String)]
-)
+) {
+  val tableMap = tableInfo.toMap
+  val parMap = parInfo.toMap
+}
 
 object Student {
 

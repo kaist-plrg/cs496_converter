@@ -1,0 +1,40 @@
+<html>
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="./index.js"></script>
+  </head>
+  <body>
+    <p>applicants</p>
+    <input id="input_aid" size="100" type="url"></input>
+    <p>prevs</p>
+    <input id="input_pid" size="100" type="url"></input>
+    <p>summaries</p>
+    <input id="input_sid" size="100" type="url"></input>
+    <br>
+
+    <button onclick="downloads()">downloads</button>
+    <button onclick="get('students')">students</button>
+    <button onclick="get('photos')">photos</button>
+    <button onclick="get('tex')">pdfs</button>
+
+    <p>evals</p>
+    <input id="input_eid" size="100" type="url"></input>
+    <p>pick configs</p>
+    <input id="input_cid" size="100" type="url"></input>
+    <br>
+
+    <button onclick="evals()">download evals</button>
+
+    <p>seed</p>
+    <input id="input_seed" size="10" type="text"></input>
+    <p>class size</p>
+    <input id="input_size" size="10" type="number"></input>
+    <p>group size</p>
+    <input id="input_gsize" size="10" type="number"></input>
+    <p>number of sessions</p>
+    <input id="input_num" size="10" type="number"></input>
+    <br>
+
+    <button onclick="pick()">pick</button>
+  </body>
+</html>
