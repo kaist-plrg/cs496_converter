@@ -45,8 +45,10 @@ object Tex {
   private def mkPar(
     parInfo: List[(String, String)], parMap: Map[String, String]
   ): String = {
-    def parEntry(field: String, content: String): String =
+    def parEntry(field: String, _content: String): String = {
+      val content = if (_content.forall(_ == ' ')) "-" else _content
       s"\\noindent\n{\\bf\\large - ${escape(field)}} \n\n${escape(content)}"
+    }
     parInfo.map{
       case (f, c) => parEntry(parMap.getOrElse(f, f), c)
     }.mkString(" \\\\[1em]\n")
@@ -57,7 +59,7 @@ object Tex {
     val builder = new StringBuilder
     for (ch <- raw)
       if (esc(ch)) builder += '\\' += ch
-      else if (ch == '~') builder ++= "\\verb!~!"
+      else if (ch == '~') builder += '-'
       else if (ch == '^') builder ++= "\\textsuperscript{$\\wedge$}"
       else builder += ch
     builder.toString.replaceAll("\n", "\n\n")
