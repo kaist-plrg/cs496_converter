@@ -2,6 +2,9 @@
 *.json
 out
 project/target
+project/project
+project/metals.sbt
+project/.bloop
 target
 .metals
 .bloop

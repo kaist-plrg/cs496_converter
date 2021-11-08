@@ -76,25 +76,40 @@ class ServerPlan extends Plan {
 
     case r @ GET(Path("/photos") & Params(params)) => run {
       FileUtils.cleanDirectory(photoDir)
-      students.par.foreach{
-        case (s, i) =>
+      def aux(ps: collection.parallel.ParSeq[(Student, Int)]): Unit = {
+        val failed = ps.filterNot { case (s, i) =>
           GoogleDriveUtil.downloadPhoto(service, s.photo, i, photoDir)
+        }
+        if (failed.length == ps.length)
+          println(s"${failed.length} failed again. Stop!")
+        else if (failed.nonEmpty) {
+          println(s"${failed.length} failed. Retrying in 10 seconds.")
+          Thread.sleep(10000)
+          aux(failed)
+        }
       }
+      aux(students.par)
       success(Ok)
     }
 
     case r @ GET(Path("/tex") & Params(params)) => run {
       val parent = getId(params("id"))
       FileUtils.cleanDirectory(texDir)
-      val f1 = printTex(false)
+      val (n1, f1) = printTex(false)
+      val (n2, f2) = printTex(true)
+      buildTex(n1, f1)
+      buildTex(n2, f2)
       GoogleDriveUtil.uploadPdf(
-        service, parent,
-        "CS496: 20xx 여름/겨울 지원서.pdf", new File(f1)
+        service,
+        parent,
+        "CS496: 20xx 여름/겨울 지원서.pdf",
+        new File(f1)
       )
-      val f2 = printTex(true)
       GoogleDriveUtil.uploadPdf(
-        service, parent,
-        "CS496: 20xx 여름/겨울 지원서(공유).pdf", new File(f2)
+        service,
+        parent,
+        "CS496: 20xx 여름/겨울 지원서(공유).pdf",
+        new File(f2)
       )
     }
 
@@ -119,7 +134,8 @@ class ServerPlan extends Plan {
       val parent = getId(params("id"))
 
       val head :: _data = getRows(efile)
-      val configs = getRows(cfile).map(ExcelUtil.getString(_, 0))
+      val configs = getRows(cfile)
+        .map(ExcelUtil.getString(_, 0))
         .takeWhile(_.nonEmpty)
       Applicant.initialize(head, summaries(5), summaries(6))
       val conf = new PickConfig(configs)
@@ -129,10 +145,11 @@ class ServerPlan extends Plan {
         sys.error(s"${students.length} != ${data.length}")
 
       // making sessions
-      val origApplicants = (students zip data).map{
-        case ((s, _), r) => Applicant(s, r)
+      val origApplicants = (students zip data).map { case ((s, _), r) =>
+        Applicant(s, r)
       }
-      val applicants = origApplicants.filterNot(a => a.coding == "하" && a.cooperation == "하")
+      val applicants =
+        origApplicants.filterNot(a => a.coding == "하" && a.cooperation == "하")
       val byAccept = applicants.groupBy(_.accept)
       val accepts = byAccept("O")
       val intermediates = byAccept("?")
@@ -150,101 +167,129 @@ class ServerPlan extends Plan {
         sessions
       }
       def univVar(sessions: List[Session]): Double = {
-        val univss = sessions.map(_.getApplicants.map(_.university).filterNot(_ == "KAIST"))
+        val univss = sessions.map(
+          _.getApplicants.map(_.university).filterNot(_ == "KAIST")
+        )
         val univSet = univss.flatten.toSet
-        univSet.map(name =>
-          variance(univss.map(univs =>
-            univs.count(_ == name)
-          ))
-        ).sum
+        univSet
+          .map(name => variance(univss.map(univs => univs.count(_ == name))))
+          .sum
       }
       val sessions = sessionss.minBy(univVar)(Ordering.Double.TotalOrdering)
 
       // making groups
-      val groups = sessions.zipWithIndex.map{
-        case (s, i) =>
-          val groups = List.fill(size / gsize)(new Session(conf, gsize))
-          register(s.accepted, groups)
-          (i + 1) -> (groups.zipWithIndex.map{
-            case (g, j) => j + 1 -> g
-          }.toMap)
+      val groups = sessions.zipWithIndex.map { case (s, i) =>
+        val groups =
+          List.fill(2)(new Session(conf, s.getApplicants.length / 2))
+        register(s.accepted, groups)
+        (i + 1) -> (groups.zipWithIndex.map { case (g, j) =>
+          j + 1 -> g
+        }.toMap)
       }.toMap
 
       // not accepted
       val allAccepted = sessions.flatMap(_.accepted)
-      val notAccepted = (accepts ++ intermediates).filterNot(allAccepted.contains(_))
+      val notAccepted =
+        (accepts ++ intermediates).filterNot(allAccepted.contains(_))
 
       // writing to xlsx
       val file = pickDir.getAbsolutePath + File.separator + "sessions.xlsx"
-      ExcelUtil.writeWorkbook(file, wb => {
-        ExcelUtil.writeSheet(wb, "참가자", sheet => {
-          val st = ExcelUtil.createStyle(wb, 230, 230, 230)
-          for (i <- groups.keys.toList.sorted) {
-            val m = groups(i)
-            for (j <- m.keys.toList.sorted) {
-              val g = m(j)
-              sheet.write(List(s"${i}분반", s"${j}그룹"), st)
-              for (s <- g.accepted.sortBy(a => (a.university, a.ent, a.name))) {
-                sheet.write(s.info)
+      ExcelUtil.writeWorkbook(
+        file,
+        wb => {
+          ExcelUtil.writeSheet(
+            wb,
+            "참가자",
+            sheet => {
+              val st = ExcelUtil.createStyle(wb, 230, 230, 230)
+              for (i <- groups.keys.toList.sorted) {
+                val m = groups(i)
+                for (j <- m.keys.toList.sorted) {
+                  val g = m(j)
+                  sheet.write(List(s"${i}분반", s"${j}그룹"), st)
+                  for (
+                    s <- g.accepted.sortBy(a => (a.university, a.ent, a.name))
+                  ) {
+                    sheet.write(s.info)
+                  }
+                }
               }
             }
-          }
-        })
-        ExcelUtil.writeSheet(wb, "예비 후보", sheet => {
-          val waits = MMap[Applicant, Int]()
-          def updateWaits(a: Applicant, sc: Int): Unit = waits.get(a) match {
-            case Some(n) => waits.update(a, n + sc)
-            case None => waits += (a -> sc)
-          }
-          sessions.foreach(s =>
-            for (a <- s.accepted)
-              s.withoutDo(a){
-                val sorted =
-                  notAccepted
-                    .map(aa => (aa, s.scoreIncrease(aa)))
-                    .sortBy(-_._2)
-                updateWaits(sorted(0)._1, 2);
-                updateWaits(sorted(1)._1, 1);
-              }
           )
-          waits.toList.sortBy(-_._2).foreach{
-            case (s, score) => sheet.write(s.info :+ score.toString)
-          }
-        })
-        ExcelUtil.writeSheet(wb, "불합격", sheet =>
-          notAccepted.foreach(s => sheet.write(s.info))
-        )
-      })
+          ExcelUtil.writeSheet(
+            wb,
+            "예비 후보",
+            sheet => {
+              val waits = MMap[Applicant, Int]()
+              def updateWaits(a: Applicant, sc: Int): Unit =
+                waits.get(a) match {
+                  case Some(n) => waits.update(a, n + sc)
+                  case None    => waits += (a -> sc)
+                }
+              sessions.foreach(s =>
+                for (a <- s.accepted)
+                  s.withoutDo(a) {
+                    val sorted =
+                      notAccepted
+                        .map(aa => (aa, s.scoreIncrease(aa)))
+                        .sortBy(-_._2)
+                    updateWaits(sorted(0)._1, 2);
+                    updateWaits(sorted(1)._1, 1);
+                  }
+              )
+              waits.toList.sortBy(-_._2).foreach { case (s, score) =>
+                sheet.write(s.info :+ score.toString)
+              }
+            }
+          )
+          ExcelUtil.writeSheet(
+            wb,
+            "불합격",
+            sheet => notAccepted.foreach(s => sheet.write(s.info))
+          )
+        }
+      )
 
       // uploading to Google Drive
       val id = GoogleDriveUtil.uploadExcel(
-        service, parent, "CS496: 20xx 여름/겨울 그룹 편성(전체)", new File(file)
+        service,
+        parent,
+        "CS496: 20xx 여름/겨울 그룹 편성(전체)",
+        new File(file)
       )
       Process(s"open https://docs.google.com/spreadsheets/d/$id").!
 
       // statistics
       Json.toJson(
         ("전체" -> Statistics.create(allAccepted)) +:
-        sessions.map(s => Statistics.create(s.accepted)).zipWithIndex
-          .map{ case (t, i) => s"${i + 1}분반" -> t } :+
-        ("합격률" -> (
-          List("대학", "지원", "합격", "비율") +:
-          origApplicants.groupBy(_.university).toList.sortBy(_._1).map{
-            case (univ, l) =>
-              val total = l.length
-              val accepted = l.count(allAccepted.contains)
-              val ratio = accepted.toDouble / total
-              List(univ, total.toString, accepted.toString, f"$ratio%1.3f")
-          }
-        ))
+          sessions
+            .map(s => Statistics.create(s.accepted))
+            .zipWithIndex
+            .map { case (t, i) =>
+              s"${i + 1}분반" -> t
+            } :+
+          ("합격률" -> (
+            List("대학", "지원", "합격", "비율") +:
+              // origApplicants.groupBy(_.university).toList.sortBy(_._1).map{
+              intermediates.groupBy(_.university).toList.sortBy(_._1).map {
+                case (univ, l) =>
+                  val total = l.length
+                  val accepted = l.count(allAccepted.contains)
+                  val ratio = accepted.toDouble / total
+                  List(
+                    univ,
+                    total.toString,
+                    accepted.toString,
+                    f"$ratio%1.3f"
+                  )
+              }
+          ))
       )
     }
 
     case r @ GET(Path("/delete")) => run {
       def deleteAll(name: String) =
-        service
-          .files
-          .list
+        service.files.list
           .setQ(s"name = \'$name\'")
           .execute()
           .getFiles
@@ -276,25 +321,31 @@ class ServerPlan extends Plan {
     val phead :: pdata = getRows(pfile)
     summaries = getRows(sfile)
     Student.initialize(head, phead, pdata, summaries)
-    students = data.flatMap(Student.create).zipWithIndex.map{
-      case (s, i) => (s, i + 1)
+    students = data.flatMap(Student.create).zipWithIndex.map { case (s, i) =>
+      (s, i + 1)
     }
   }
 
-  def printTex(share: Boolean): String = {
+  def printTex(share: Boolean): (String, String) = {
     val photoFiles =
-      FileUtils.iterateFiles(photoDir, null, false).asScala.map(
-        s => {
+      FileUtils
+        .iterateFiles(photoDir, null, false)
+        .asScala
+        .map(s => {
           val n = s.getName
           nameWithoutExtension(n).toInt -> s.getAbsolutePath
-        }
-      ).toMap
+        })
+        .toMap
     val texContent =
-      students.map{
-        case (s, i) => Tex.mkChapter(s, photoFiles(i), i, share, summaries)
-      }.mkString(
-        Tex.start("KoPubWorld돋움체_Pro"), "\n\n", Tex.end
-      )
+      students
+        .map { case (s, i) =>
+          Tex.mkChapter(s, photoFiles(i), i, share, summaries)
+        }
+        .mkString(
+          Tex.start("KoPubWorld돋움체_Pro"),
+          "\n\n",
+          Tex.end
+        )
 
     val ns = if (share) "share" else "internal"
     val name = s"applicants-$ns"
@@ -304,11 +355,14 @@ class ServerPlan extends Plan {
     texWriter.print(texContent)
     texWriter.close()
 
+    (name, pdfFile)
+  }
+
+  def buildTex(name: String, pdf: String) = {
     Process(s"xelatex $name", texDir).!
     Process(s"xelatex $name", texDir).!
     Process(s"xelatex $name", texDir).!
-    Process(s"open $pdfFile").!
-    pdfFile
+    Process(s"open $pdf").!
   }
 
   def register(a: Seq[Applicant], s: List[Session]): Unit = {
@@ -316,8 +370,24 @@ class ServerPlan extends Plan {
     if (addable.isEmpty || a.isEmpty) return
 
     val min = addable.minBy(_.score)
-    val scores = for (applicant <- a) yield (applicant, min.scoreIncrease(applicant))
-    val (max, _) = scores.maxBy(_._2)
+    val scores =
+      for (applicant <- a) yield (applicant, min.scoreIncrease(applicant))
+    val grouped = scores.groupBy(_._2)
+    val maxStudents = grouped.maxBy(_._1)._2.map(_._1)
+    val univs = maxStudents.map(_.university).toSet
+    val univMap = s
+      .flatMap(_.getApplicants)
+      .map(_.university)
+      .groupBy(x => x)
+      .map { case (univ, l) => univ -> l.length }
+    val sortedUnivs = univs
+      .map(u => u -> univMap.getOrElse(u, 0))
+      .toList
+      .sortBy(_._2)
+    val max = sortedUnivs
+      .map(_._1)
+      .flatMap(u => maxStudents.find(_.university == u))
+      .head
 
     min.addApplicant(max)
     register(a.filterNot(_ == max), s)
@@ -331,36 +401,35 @@ class ServerPlan extends Plan {
     }).sum / l.length
   }
 
-
   def run(x: => Unit) =
     try {
       x
       success(
         ResponseHeader("Content-Type", List("application/json")) ~>
-        ResponseString("{\"success\": true}")
+          ResponseString("{\"success\": true}")
       )
     } catch {
       case e: Throwable =>
         e.printStackTrace()
-      success(
-        ResponseHeader("Content-Type", List("application/json")) ~>
-        ResponseString("{\"success\": false}")
-      )
+        success(
+          ResponseHeader("Content-Type", List("application/json")) ~>
+            ResponseString("{\"success\": false}")
+        )
     }
 
   def runJson(v: => JsValue) =
     try {
       success(
         ResponseHeader("Content-Type", List("application/json")) ~>
-        ResponseString(s"""{"success": true, "result": ${v.toString}}""")
+          ResponseString(s"""{"success": true, "result": ${v.toString}}""")
       )
     } catch {
       case e: Throwable =>
         e.printStackTrace()
-      success(
-        ResponseHeader("Content-Type", List("application/json")) ~>
-        ResponseString("{\"success\": false}")
-      )
+        success(
+          ResponseHeader("Content-Type", List("application/json")) ~>
+            ResponseString("{\"success\": false}")
+        )
     }
 
   private def nameWithoutExtension(name: String): String =

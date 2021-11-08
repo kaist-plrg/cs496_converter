@@ -10,12 +10,14 @@ import com.google.api.client.http.FileContent
 import java.io.{FileInputStream, FileOutputStream, File}
 
 import scala.jdk.CollectionConverters._
+import scala.Console.{RED, RESET}
 
 object GoogleDriveUtil {
   private val appName = "Madcamp Applications to PDF"
   private val jsonFactory = JacksonFactory.getDefaultInstance
   private val scopes = List(DriveScopes.DRIVE).asJava
-  private val xlsxType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  private val xlsxType =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   private val gsheetType = "application/vnd.google-apps.spreadsheet"
   private val pdfType = "application/pdf"
 
@@ -36,7 +38,12 @@ object GoogleDriveUtil {
     println(s"$name has been downloaded")
   }
 
-  def downloadPhoto(service: Drive, id: String, i: Int, dir: File): Unit = {
+  def downloadPhoto(
+      service: Drive,
+      id: String,
+      i: Int,
+      dir: File
+  ): Boolean = {
     try {
       val info = service.files.get(id)
       val name = info.execute.getName
@@ -46,11 +53,12 @@ object GoogleDriveUtil {
       info.executeMediaAndDownloadTo(out)
       out.flush()
       out.close()
-      println(s"$name has been downloaded")
+      println(f"[$i%03d] $name has been downloaded")
+      true
     } catch {
       case e: Exception =>
-        println("failed... try again")
-        downloadPhoto(service, id, i, dir)
+        println(f"$RED[$i%03d] Failed$RESET")
+        false
     }
   }
 
@@ -58,10 +66,17 @@ object GoogleDriveUtil {
     service.files.list
       .setQ(s"\'$id\' in parents and mimeType = \'$gsheetType\'")
       .execute()
-      .getFiles.asScala.toList
+      .getFiles
+      .asScala
+      .toList
   }
 
-  def uploadExcel(service: Drive, parent: String, name: String, file: File): String = {
+  def uploadExcel(
+      service: Drive,
+      parent: String,
+      name: String,
+      file: File
+  ): String = {
     val meta = new GFile;
     meta.setName(name);
     meta.setParents(List(parent).asJava)
@@ -71,7 +86,12 @@ object GoogleDriveUtil {
     res.getId
   }
 
-  def uploadPdf(service: Drive, parent: String, name: String, file: File): String = {
+  def uploadPdf(
+      service: Drive,
+      parent: String,
+      name: String,
+      file: File
+  ): String = {
     val meta = new GFile;
     meta.setName(name);
     meta.setParents(List(parent).asJava)
