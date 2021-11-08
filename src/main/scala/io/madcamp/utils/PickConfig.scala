@@ -23,7 +23,7 @@ class PickConfig(lines: List[String]) {
         }
       }
 
-    (lines match {
+    val res = (lines match {
       case List(
         year, young, midOld, old, male, female, mil, notMil,
         kaist, notKaist, repeat, notRepeat, lowCode, midCode, highCode, superCode,
@@ -61,5 +61,7 @@ class PickConfig(lines: List[String]) {
           }
         })
     }).map { case (v, vl, vh) => diff(v, vl, vh) }.sum + a.filter(_.motiv).size
+    val max = (a.filterNot(_.isKaist).groupBy(_.university).map{ case (_, as) => as.length }.toSet + 0).max
+    if (max > 3) (Int.MinValue  / 4) else res
   }
 }
