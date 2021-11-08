@@ -16,13 +16,14 @@ object ExcelUtil {
 
   def getString(c: Cell): String = {
     if (c == null) ""
-    else (c.getCellType match {
-      case CellType.NUMERIC =>
-        c.getNumericCellValue.toLong.toString
-      case CellType.FORMULA =>
-        c.getCellFormula
-      case _ => c.getStringCellValue
-    }).trim.filterNot(_.isControl)
+    else
+      (c.getCellType match {
+        case CellType.NUMERIC =>
+          c.getNumericCellValue.toLong.toString
+        case CellType.FORMULA =>
+          c.getCellFormula
+        case _ => c.getStringCellValue
+      }).trim.filterNot(_.isControl)
   }
 
   def getString(row: Row, col: Int): String = getString(row.getCell(col))
@@ -37,7 +38,9 @@ object ExcelUtil {
   }
 
   def writeSheet(
-    wb: XSSFWorkbook, name: String, func: SheetWrapper => Unit
+      wb: XSSFWorkbook,
+      name: String,
+      func: SheetWrapper => Unit
   ): Unit = {
     val sheet = wb.createSheet(name)
     val wrapper = new SheetWrapper(sheet)
@@ -51,12 +54,13 @@ object ExcelUtil {
     val st = wb.createCellStyle
     st.setFillPattern(SOLID_FOREGROUND);
     st.setFillForegroundColor(
-      new XSSFColor(new Color(r, g, b), new DefaultIndexedColorMap))
+      new XSSFColor(new Color(r, g, b), new DefaultIndexedColorMap)
+    )
     st
   }
 }
 
-class SheetWrapper(sheet: Sheet){
+class SheetWrapper(sheet: Sheet) {
 
   private val map = MMap.empty[Int, Int]
   private var rowNumber = 0
@@ -64,39 +68,34 @@ class SheetWrapper(sheet: Sheet){
   def write(r: Row, i: Int, s: String): Unit = {
     val c = r.createCell(i)
     c.setCellValue(s)
-    map(i) = map.getOrElse(i, 0) max s.map(
-      c => if (c < 128) 1 else 2
-    ).sum
+    map(i) = map.getOrElse(i, 0) max s.map(c => if (c < 128) 1 else 2).sum
   }
 
   def write(r: Row, i: Int, s: String, st: CellStyle): Unit = {
     val c = r.createCell(i)
     c.setCellValue(s)
     c.setCellStyle(st)
-    map(i) = map.getOrElse(i, 0) max s.map(
-      c => if (c < 128) 1 else 2
-    ).sum
+    map(i) = map.getOrElse(i, 0) max s.map(c => if (c < 128) 1 else 2).sum
   }
 
   def write(ss: List[String]): Unit = {
     val r = newRow()
-    ss.zipWithIndex.foreach{
-      case (s, i) => write(r, i, s)
+    ss.zipWithIndex.foreach { case (s, i) =>
+      write(r, i, s)
     }
   }
 
   def write(ss: List[String], st: CellStyle): Unit = {
     val r = newRow()
     r.setRowStyle(st)
-    ss.zipWithIndex.foreach{
-      case (s, i) => write(r, i, s, st)
+    ss.zipWithIndex.foreach { case (s, i) =>
+      write(r, i, s, st)
     }
   }
 
   def setWidth(sheet: Sheet): Unit =
-    map.foreach{
-      case (i, l) =>
-        sheet.setColumnWidth(i, (l * 256 + 256) min 12800)
+    map.foreach { case (i, l) =>
+      sheet.setColumnWidth(i, (l * 256 + 256) min 12800)
     }
 
   def newRow(): Row = {

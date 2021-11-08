@@ -4,22 +4,25 @@ object Statistics {
   def create(applicants: List[Applicant]): List[List[String]] = {
     def aux(s: String, f: Applicant => String): List[List[String]] =
       List(s, "") ::
-        applicants.groupBy(f).toList.sortBy(_._1).map{
-          case (k, v) => List(k, v.size.toString)
+        applicants.groupBy(f).toList.sortBy(_._1).map { case (k, v) =>
+          List(k, v.size.toString)
         }
 
-    def append(l1: List[List[String]], l2: List[List[String]]): List[List[String]] =
+    def append(
+        l1: List[List[String]],
+        l2: List[List[String]]
+    ): List[List[String]] =
       (for (i <- 0 until Math.max(l1.size, l2.size))
-        yield (
-          if (i < l1.size) {
-            if (i < l2.size)
-              l1(i) ++ l2(i)
-            else
-              l1(i) ++ List.fill(l2.head.length)("")
-          } else
-            List.fill(l1.head.length)("") ++ l2(i)
-        )
-      ).toList
+        yield
+          (
+            if (i < l1.size) {
+              if (i < l2.size)
+                l1(i) ++ l2(i)
+              else
+                l1(i) ++ List.fill(l2.head.length)("")
+            } else
+              List.fill(l1.head.length)("") ++ l2(i)
+          )).toList
 
     List(
       aux("생년", _.birth./(10000).toString),

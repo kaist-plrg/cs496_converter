@@ -26,8 +26,14 @@ case class Applicant(student: Student, row: Row) {
   val accept: String = ExcelUtil.getString(row, Applicant.evalIndices(3))
   val etc: String = ExcelUtil.getString(row, Applicant.evalIndices(4))
 
-  override def toString: String =
-    s"${name},${university},${if (isMale) "남" else "여"},${ent}학번,${major.replace(',', ' ')},${mail},${phone},${birth},${if (isMilitary) "병역필" else "-"},${if (isRepeat) "재수" else "-"},${if (isAbroad) "해외" else "국내"},${coding},${cooperation},${motiv},${accept},${etc}"
+  override def toString: String = {
+    val g = if (isMale) "남" else "여"
+    val ma = major.replace(',', ' ')
+    val mi = if (isMilitary) "병역필" else "-"
+    val r = if (isRepeat) "재수" else "-"
+    val a = if (isAbroad) "해외" else "국내"
+    s"${name},${university},${g},${ent}학번,${ma},${mail},${phone},${birth},${mi},${r},${a},${coding},${cooperation},${motiv},${accept},${etc}"
+  }
 
   def info: List[String] =
     List(
@@ -68,16 +74,30 @@ object Applicant {
     val headers = row.iterator.asScala.toList.map(ExcelUtil.getString)
     nameIndex = headers.indexWhere(_.contains("이름"))
     val colNames2 = cols2.iterator.asScala.toList
-      .map(ExcelUtil.getString).takeWhile(_.nonEmpty)
+      .map(ExcelUtil.getString)
+      .takeWhile(_.nonEmpty)
     evalIndices = colNames2.map(headers.indexOf)
-    evalIndices.zipWithIndex.filter{ case (i, ind) => i == -1 }.foreach{
+    evalIndices.zipWithIndex.filter { case (i, ind) => i == -1 }.foreach {
       case (_, ind) => sys.error(s"${colNames2(ind)} not found")
     }
   }
 
   val headerTitles = List(
-    "이름", "학교", "성별", "학번", "전공", "이메일",
-    "전화번호", "생년월일" ,"병역", "재수", "대학",
-    "코딩", "팀웍", "다양성", "합격", "비고"
+    "이름",
+    "학교",
+    "성별",
+    "학번",
+    "전공",
+    "이메일",
+    "전화번호",
+    "생년월일",
+    "병역",
+    "재수",
+    "대학",
+    "코딩",
+    "팀웍",
+    "다양성",
+    "합격",
+    "비고"
   )
 }

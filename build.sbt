@@ -1,7 +1,7 @@
 ThisBuild / organization := "io.madcamp"
 ThisBuild / scalaVersion := "2.13.2"
-ThisBuild / version      := "1.0.0"
-ThisBuild / name         := "utils"
+ThisBuild / version := "1.0.0"
+ThisBuild / name := "utils"
 
 ThisBuild / scalacOptions += "-deprecation"
 ThisBuild / scalacOptions += "-Xlint:unused"
@@ -24,4 +24,4 @@ ThisBuild / libraryDependencies += "ws.unfiltered" %% "unfiltered-jetty" % unfil
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / useCoursier := false
-Global / retrieveManaged  := true
+Global / retrieveManaged := true

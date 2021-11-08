@@ -5,37 +5,48 @@ import org.apache.poi.ss.usermodel.Row
 object Tex {
 
   def mkChapter(
-    s: Student, photo: String, index: Int, share: Boolean, summaries: List[Row]
+      s: Student,
+      photo: String,
+      index: Int,
+      share: Boolean,
+      summaries: List[Row]
   ): String = {
     val r0 :: r1 :: r2 :: r3 :: r4 :: _ = summaries
     val tableMap = (ExcelUtil.getStrings(r0) zip ExcelUtil.getStrings(r1)).toMap
     val parMap = (ExcelUtil.getStrings(r2) zip ExcelUtil.getStrings(r3)).toMap
     val internal = ExcelUtil.getStrings(r4).toSet
     Tex.mkIntro(s.name, photo, index, share) + "\n" +
-    Tex.mkTable(s.tableInfo, share, tableMap, internal) + "\n" +
-    Tex.mkPar(s.parInfo, parMap)
+      Tex.mkTable(s.tableInfo, share, tableMap, internal) + "\n" +
+      Tex.mkPar(s.parInfo, parMap)
   }
 
   private def mkIntro(
-    name: String, photo: String, index: Int, share: Boolean
+      name: String,
+      photo: String,
+      index: Int,
+      share: Boolean
   ): String =
-    s"""\\chapter{${if (!share) name else s"익명의 지원자 $index"}}
+    s"""\\chapter{${if (!share) name
+    else s"익명의 지원자 $index"}}
        |\\includegraphics[width=0.5\\textwidth,height=0.25\\textheight,keepaspectratio]{$photo}""".stripMargin
 
   private def mkTable(
-    tableInfo: List[(String, String)], share: Boolean,
-    tableMap: Map[String, String], internal: Set[String]
+      tableInfo: List[(String, String)],
+      share: Boolean,
+      tableMap: Map[String, String],
+      internal: Set[String]
   ): String = {
     def tableEntry(field: String, content: String): String =
       s"\\text{{\\bf ${escape(field)}}} & \\text{${escape(content)}}"
-    val header = "\\begin{center}\n\\begin{tabular}{|C{0.15\\textwidth}|C{0.30\\textwidth}||C{0.15\\textwidth}|C{0.30\\textwidth}|} \\hline\n"
+    val header =
+      "\\begin{center}\n\\begin{tabular}{|C{0.15\\textwidth}|C{0.30\\textwidth}||C{0.15\\textwidth}|C{0.30\\textwidth}|} \\hline\n"
     val footer = "\\\\ \\hline\n\\end{tabular}\n\\end{center}"
     val info =
       if (!share) tableInfo
-      else tableInfo.filter{ case (f, _) => !internal(f) }
+      else tableInfo.filter { case (f, _) => !internal(f) }
     val body =
       info
-        .map{ case (f, c) => tableEntry(tableMap.getOrElse(f, f), c) }
+        .map { case (f, c) => tableEntry(tableMap.getOrElse(f, f), c) }
         .sliding(2, 2)
         .map(l => l.mkString(" & "))
         .mkString(" \\\\ \\hline\n")
@@ -43,15 +54,18 @@ object Tex {
   }
 
   private def mkPar(
-    parInfo: List[(String, String)], parMap: Map[String, String]
+      parInfo: List[(String, String)],
+      parMap: Map[String, String]
   ): String = {
     def parEntry(field: String, _content: String): String = {
       val content = if (_content.forall(_ == ' ')) "-" else _content
       s"\\noindent\n{\\bf\\large - ${escape(field)}} \n\n${escape(content)}"
     }
-    parInfo.map{
-      case (f, c) => parEntry(parMap.getOrElse(f, f), c)
-    }.mkString(" \\\\[1em]\n")
+    parInfo
+      .map { case (f, c) =>
+        parEntry(parMap.getOrElse(f, f), c)
+      }
+      .mkString(" \\\\[1em]\n")
   }
 
   private def escape(raw: String): String = {
@@ -66,7 +80,7 @@ object Tex {
   }
 
   def start(font: String) =
-s"""%!TEX encoding = UTF-8 Unicode
+    s"""%!TEX encoding = UTF-8 Unicode
 \\documentclass[a4paper,12pt]{book}
 \\usepackage[margin=0.5in]{geometry}
 \\usepackage[T1]{fontenc}
