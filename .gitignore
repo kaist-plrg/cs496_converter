@@ -7,3 +7,4 @@ target
 .bloop
 .DS_Store
 lib_managed
+.scalafmt.conf
