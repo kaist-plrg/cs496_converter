@@ -242,16 +242,20 @@ class ServerPlan extends Plan {
                 sessions.foreach(s =>
                   for (a <- s.accepted)
                     s.withoutDo(a) {
-                      val sorted =
-                        notAccepted
-                          .map(aa => (aa, s.scoreIncrease(aa)))
-                          .sortBy(-_._2)
-                      updateWaits(sorted(0)._1, 2);
-                      updateWaits(sorted(1)._1, 1);
+                      notAccepted
+                        .map(aa => (aa, s.scoreIncrease(aa)))
+                        .groupBy(_._2)
+                        .toList
+                        .sortBy(-_._1)
+                        .head
+                        ._2
+                        .foreach(p => updateWaits(p._1, 1))
                     }
                 )
-                waits.toList.sortBy(-_._2).foreach { case (s, score) =>
-                  sheet.write(s.info :+ score.toString)
+                waits.toList.groupBy(_._2).toList.sortBy(-_._1).foreach {
+                  case (_, l) =>
+                    val (s, score) :: _ = l
+                    sheet.write(s.info :+ score.toString)
                 }
               }
             )
