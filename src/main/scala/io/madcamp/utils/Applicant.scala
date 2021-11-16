@@ -20,8 +20,14 @@ case class Applicant(student: Student, row: Row) {
   val major: String = student.tableMap(Applicant.colNames(7))
   val isRepeat: Boolean = !student.parMap(Applicant.colNames(8)).contains("없음")
 
-  val coding: String = ExcelUtil.getString(row, Applicant.evalIndices(0))
-  val cooperation: String = ExcelUtil.getString(row, Applicant.evalIndices(1))
+  val coding: String = {
+    val s = ExcelUtil.getString(row, Applicant.evalIndices(0))
+    if (s == "") "하" else s
+  }
+  val cooperation: String = {
+    val s = ExcelUtil.getString(row, Applicant.evalIndices(1))
+    if (s == "") "하" else s
+  }
   val motiv: Boolean = ExcelUtil.getString(row, Applicant.evalIndices(2)) == "O"
   val accept: String = ExcelUtil.getString(row, Applicant.evalIndices(3))
   val etc: String = ExcelUtil.getString(row, Applicant.evalIndices(4))

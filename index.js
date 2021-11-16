@@ -16,14 +16,13 @@ function get(s) {
 function pick() {
   const seed = encodeURIComponent($('#input_seed')[0].value);
   const size = $('#input_size')[0].value;
-  const gsize = $('#input_gsize')[0].value;
   const num = $('#input_num')[0].value;
   const id = encodeURIComponent($('#input_id')[0].value);
-  if (seed && size && gsize && num && id) {
+  if (seed && size && num && id) {
     $(".loader").css("display", "block");
     $.ajax({
       type: 'GET',
-      url: `/pick?seed=${seed}&size=${size}&gsize=${gsize}&num=${num}&id=${id}`
+      url: `/pick?seed=${seed}&size=${size}&num=${num}&id=${id}`
     })
     .done(msg => {
       $(".loader").css("display", "none");

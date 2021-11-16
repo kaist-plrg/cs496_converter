@@ -11,6 +11,8 @@ case class Student(
 ) {
   val tableMap = tableInfo.toMap
   val parMap = parInfo.toMap
+
+  val university: String = tableMap("대학교")
 }
 
 object Student {

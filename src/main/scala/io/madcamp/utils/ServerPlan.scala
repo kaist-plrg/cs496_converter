@@ -136,8 +136,8 @@ class ServerPlan extends Plan {
         // configurations
         val seed = params("seed").mkString
         val parent = getId(params("id"))
-        // val size = params("size").mkString.toInt
-        // val numOfSessions = params("num").mkString.toInt
+        val size = params("size").mkString.toInt
+        val numOfSessions = params("num").mkString.toInt
 
         val head :: _data = getRows(efile)
         val configs = getRows(cfile)
@@ -151,7 +151,13 @@ class ServerPlan extends Plan {
           sys.error(s"${students.length} != ${data.length}")
 
         // making sessions
-        val origApplicants = (students zip data).map { case ((s, _), r) =>
+        val origApplicants = students.map { case (s, _) =>
+          val r = data
+            .find(r =>
+              ExcelUtil.getString(r, 0) == s.name && ExcelUtil
+                .getString(r, 1) == s.university
+            )
+            .get
           Applicant(s, r)
         }
         val applicants =
@@ -163,8 +169,8 @@ class ServerPlan extends Plan {
 
         val iter = 10
         val sessionss = for (i <- 1 to iter) yield {
-          // val sessions = List.fill(numOfSessions)(new Session(conf, size))
-          val sessions = List(new Session(conf, 20), new Session(conf, 24))
+          val sessions = List.fill(numOfSessions)(new Session(conf, size))
+          // val sessions = List(new Session(conf, 20), new Session(conf, 24))
           val rand = new Random((seed + i).##)
 
           register(rand.shuffle(accepts), sessions)
@@ -345,6 +351,7 @@ class ServerPlan extends Plan {
         .toMap
     val texContent =
       students
+        .sortBy(_._1.university)
         .map { case (s, i) =>
           Tex.mkChapter(s, photoFiles(i), i, share, summaries)
         }

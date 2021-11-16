@@ -25,10 +25,11 @@ object Tex {
       photo: String,
       index: Int,
       share: Boolean
-  ): String =
-    s"""\\chapter{${if (!share) name
-    else s"익명의 지원자 $index"}}
+  ): String = {
+    val n = if (!share) s"$name ($index)" else s"익명의 지원자 $index"
+    s"""\\chapter{$n}
        |\\includegraphics[width=0.5\\textwidth,height=0.25\\textheight,keepaspectratio]{$photo}""".stripMargin
+  }
 
   private def mkTable(
       tableInfo: List[(String, String)],
