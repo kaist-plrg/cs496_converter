@@ -31,7 +31,7 @@ object Student {
         tableInfo.map { case (s, i) => (s, ExcelUtil.getString(row, i)) }
       val birthday = table.find { case (f, _) => f == "생년월일" }.get._2
       val prev = prevMap.get((name, birthday)).getOrElse("해당 없음")
-      val par = ("이전 지원 여부" -> prev) +:
+      val par = ("이전 지원/불참 여부" -> prev) +:
         parInfo.map { case (s, i) => (s, ExcelUtil.getString(row, i)) }
       Some(Student(name, photo, table, par))
     } else None
@@ -48,8 +48,11 @@ object Student {
 
     val colNames: List[String] = row.iterator.asScala
       .map(c => {
-        val s = ExcelUtil.getString(c)
-        s.replaceAll("\\d+\\. ", "").replaceAll("\\d-", "")
+        val str = ExcelUtil.getString(c)
+        str
+          .replaceAll("\\d+\\. ", "")
+          .replaceAll("\\d-", "")
+          .replaceAll(" \\(\\d+자 이하\\)", "")
       })
       .toList
       .takeWhile(_.nonEmpty)

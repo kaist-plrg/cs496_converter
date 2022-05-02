@@ -28,7 +28,10 @@ object Tex {
   ): String = {
     val n = if (!share) s"$name ($index)" else s"익명의 지원자 $index"
     s"""\\chapter{$n}
-       |\\includegraphics[width=0.5\\textwidth,height=0.25\\textheight,keepaspectratio]{$photo}""".stripMargin
+       |\\begin{center}
+       |\\begin{tabular}{@{}c@{}}
+       |  \\includegraphics[width=0.40\\textwidth,height=0.18\\textheight,keepaspectratio]{$photo}
+       |\\end{tabular}""".stripMargin
   }
 
   private def mkTable(
@@ -38,16 +41,19 @@ object Tex {
       internal: Set[String]
   ): String = {
     def tableEntry(field: String, content: String): String =
-      s"\\text{{\\bf ${escape(field)}}} & \\text{${escape(content)}}"
+      if (content.contains("https://"))
+        s"\\href{$content}{$field}"
+      else
+        s"\\text{${escape(content + field)}}"
     val header =
-      "\\begin{center}\n\\begin{tabular}{|C{0.15\\textwidth}|C{0.30\\textwidth}||C{0.15\\textwidth}|C{0.30\\textwidth}|} \\hline\n"
+      "\\begin{tabular}{|C{0.15\\textwidth}|C{0.37\\textwidth}|} \\hline\n"
     val footer = "\\\\ \\hline\n\\end{tabular}\n\\end{center}"
     val info =
       if (!share) tableInfo
       else tableInfo.filter { case (f, _) => !internal(f) }
     val body =
       info
-        .map { case (f, c) => tableEntry(tableMap.getOrElse(f, f), c) }
+        .map { case (f, c) => tableEntry(tableMap.getOrElse(f, ""), c) }
         .sliding(2, 2)
         .map(l => l.mkString(" & "))
         .mkString(" \\\\ \\hline\n")
@@ -60,7 +66,7 @@ object Tex {
   ): String = {
     def parEntry(field: String, _content: String): String = {
       val content = if (_content.forall(_ == ' ')) "-" else _content
-      s"\\noindent\n{\\bf\\large - ${escape(field)}} \n\n${escape(content)}"
+      s"\\noindent\n{\\bf- ${escape(field)}}\n\n\\noindent\n${escape(content)}"
     }
     parInfo
       .map { case (f, c) =>
@@ -135,6 +141,7 @@ object Tex {
 \\setcounter{tocdepth}{1}
 \\tableofcontents
 \\newpage
+\\small
 """
   val end = "\n\\end{document}"
 }

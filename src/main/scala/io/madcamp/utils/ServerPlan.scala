@@ -18,7 +18,7 @@ import scala.collection.mutable.{Map => MMap}
 
 class ServerPlan extends Plan {
 
-  val home = sys.env("MADCAMP_UTIL_HOME")
+  val home = "."
   val out = home + File.separator + "out"
   val dir = new File(out)
   val sheetDir = new File(out + File.separator + "sheets")
@@ -360,7 +360,7 @@ class ServerPlan extends Plan {
           Tex.mkChapter(s, photoFiles(i), i, share, summaries)
         }
         .mkString(
-          Tex.start("KoPubWorld돋움체_Pro"),
+          Tex.start("KoPub돋움체"),
           "\n\n",
           Tex.end
         )

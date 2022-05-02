@@ -1,7 +1,6 @@
 package io.madcamp.utils
 
 import unfiltered.jetty.{Server => JServer}
-import scala.sys.process.Process
 
 object App {
   def main(args: Array[String]): Unit = run(
@@ -16,6 +15,6 @@ object App {
     JServer
       .http(port)
       .plan(new ServerPlan)
-      .run(_ => Process(s"open http://localhost:$port/").!)
+      .run(_ => ())
   }
 }
