@@ -26,7 +26,7 @@ object Tex {
       index: Int,
       share: Boolean
   ): String = {
-    val n = if (!share) s"$name ($index)" else s"익명의 지원자 $index"
+    val n = if (!share) name else s"익명의 지원자 $index"
     s"""\\chapter{$n}
        |\\begin{center}
        |\\begin{tabular}{@{}c@{}}

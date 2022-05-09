@@ -355,7 +355,6 @@ class ServerPlan extends Plan {
         .toMap
     val texContent =
       students
-        .sortBy(_._1.university)
         .map { case (s, i) =>
           Tex.mkChapter(s, photoFiles(i), i, share, summaries)
         }
