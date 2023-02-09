@@ -18,7 +18,7 @@ case class Applicant(student: Student, row: Row) {
   val isMale: Boolean = student.tableMap(Applicant.colNames(5)) == "남자"
   val isMilitary: Boolean = student.tableMap(Applicant.colNames(6)) == "병역필"
   val major: String = student.tableMap(Applicant.colNames(7))
-  val isRepeat: Boolean = !student.parMap(Applicant.colNames(8)).contains("없음")
+  val isRepeat: Boolean = student.tableMap(Applicant.colNames(8)) == "재수/반수"
 
   val coding: String = {
     val s = ExcelUtil.getString(row, Applicant.evalIndices(0))
