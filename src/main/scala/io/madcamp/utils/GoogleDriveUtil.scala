@@ -31,12 +31,14 @@ object GoogleDriveUtil {
       .build()
   }
 
+      /*
   def downloadExcel(service: Drive, id: String, name: String): Unit = {
     val out = new FileOutputStream(name)
     service.files.export(id, xlsxType).executeMediaAndDownloadTo(out)
     out.close()
     println(s"$name has been downloaded")
   }
+      */
 
   def downloadPhoto(
       service: Drive,

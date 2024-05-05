@@ -41,6 +41,8 @@ class ServerPlan extends Plan {
   val service =
     GoogleDriveUtil.service(home + File.separator + "credential.json")
 
+  val googleDriveJavaUtil = new GoogleDriveJavaUtil
+
   var students: List[(Student, Int)] = null
   var summaries: List[Row] = null
 
@@ -67,9 +69,9 @@ class ServerPlan extends Plan {
         val pid = files.find(_.getName.contains("재지원자 리스트")).get.getId
         val sid = files.find(_.getName.contains("질문 요약")).get.getId
         FileUtils.cleanDirectory(sheetDir)
-        GoogleDriveUtil.downloadExcel(service, aid, afile)
-        GoogleDriveUtil.downloadExcel(service, pid, pfile)
-        GoogleDriveUtil.downloadExcel(service, sid, sfile)
+        googleDriveJavaUtil.downloadExcel(service, aid, afile)
+        googleDriveJavaUtil.downloadExcel(service, pid, pfile)
+        googleDriveJavaUtil.downloadExcel(service, sid, sfile)
       }
 
     case r @ GET(Path("/students")) =>
@@ -124,8 +126,8 @@ class ServerPlan extends Plan {
         val files = GoogleDriveUtil.findFiles(service, id)
         val eid = files.find(_.getName.contains("평가 양식")).get.getId
         val cid = files.find(_.getName.contains("선발 비율")).get.getId
-        GoogleDriveUtil.downloadExcel(service, eid, efile)
-        GoogleDriveUtil.downloadExcel(service, cid, cfile)
+        googleDriveJavaUtil.downloadExcel(service, eid, efile)
+        googleDriveJavaUtil.downloadExcel(service, cid, cfile)
       }
 
     case r @ GET(Path("/pick") & Params(params)) =>
